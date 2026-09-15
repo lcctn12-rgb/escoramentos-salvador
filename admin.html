@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Escoramentos (uso local)</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+        --green: #1E6B3E; --green-dark: #16522F; --green-light: #E9F5EE;
+        --red: #C0392B; --ink: #24302A; --ink-soft: #5B6B62;
+        --paper: #FBFAF7; --surface: #FFFFFF; --border: #E1E5DE;
+    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--paper); color: var(--ink); }
+    .topbar { background: var(--green-dark); color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .topbar h1 { font-size: 1.15em; }
+    .topbar .sub { font-size: 0.8em; opacity: 0.85; }
+    .btn { background: var(--green); color: white; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.88em; font-family: inherit; }
+    .btn:hover { background: #185330; }
+    .btn.secondary { background: transparent; border: 1px solid rgba(255,255,255,0.5); }
+    .btn.secondary:hover { background: rgba(255,255,255,0.1); }
+    .layout { display: flex; height: calc(100vh - 60px); }
+    .list-col { width: 280px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 14px; flex-shrink: 0; }
+    .item { padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; cursor: pointer; font-size: 0.88em; display: flex; justify-content: space-between; align-items: center; }
+    .item:hover { background: var(--green-light); }
+    .item.active { background: var(--green-light); border-color: var(--green); }
+    .item .num { display: inline-block; width: 26px; height: 20px; background: var(--green); color: white; border-radius: 10px; text-align: center; line-height: 20px; font-size: 0.78em; font-weight: 700; margin-right: 6px; }
+    .item .flags { display: flex; gap: 4px; font-size: 0.75em; }
+    .flag { padding: 1px 6px; border-radius: 8px; background: #ddd; color: #555; }
+    .flag.on-photo { background: var(--red); color: white; }
+    .flag.on-ficha { background: var(--green); color: white; }
+    .main-col { flex: 1; overflow-y: auto; padding: 24px 32px; }
+    .empty-state { color: var(--ink-soft); text-align: center; padding: 60px 20px; }
+    .panel-title { font-size: 1.4em; font-weight: 700; color: var(--green-dark); margin-bottom: 4px; }
+    .panel-address { color: var(--ink-soft); margin-bottom: 20px; font-size: 0.92em; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .tabbtn { padding: 8px 16px; background: none; border: none; cursor: pointer; font-weight: 600; color: var(--ink-soft); font-size: 0.92em; border-bottom: 2px solid transparent; margin-bottom: -2px; font-family: inherit; }
+    .tabbtn.active { color: var(--green-dark); border-bottom-color: var(--green); }
+    .tabpane { display: none; }
+    .tabpane.active { display: block; }
+
+    .dropzone { border: 2px dashed var(--border); border-radius: 8px; padding: 30px; text-align: center; color: var(--ink-soft); margin-bottom: 16px; cursor: pointer; background: var(--surface); }
+    .dropzone:hover { border-color: var(--green); background: var(--green-light); }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+    .photo-thumb { position: relative; border-radius: 6px; overflow: hidden; aspect-ratio: 1; background: #eee; border: 2px solid var(--border); }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-thumb .rm { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 12px; }
+    .photo-thumb .fname { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; font-size: 0.65em; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    legend { padding: 0 8px; font-weight: 700; color: var(--green-dark); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.03em; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 0.85em; color: var(--ink-soft); margin-bottom: 4px; }
+    .field input[type=text], .field textarea, .field select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; font-size: 0.92em; }
+    .field textarea { resize: vertical; min-height: 50px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .scale { display: flex; gap: 14px; align-items: center; }
+    .scale label { display: flex; align-items: center; gap: 4px; font-size: 0.85em; color: var(--ink); margin: 0; }
+    .criterio { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; align-items: start; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+    .criterio:last-child { border-bottom: none; }
+    .criterio .crit-label { font-size: 0.88em; padding-top: 6px; }
+
+    .save-bar { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 14px 0; margin-top: 10px; display: flex; gap: 10px; align-items: center; }
+    .save-msg { font-size: 0.85em; color: var(--green-dark); }
+
+    .instructions { background: var(--green-light); border-left: 4px solid var(--green); border-radius: 6px; padding: 14px 16px; font-size: 0.88em; line-height: 1.5; margin-bottom: 18px; }
+    .instructions code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <div>
+        <h1>🛠️ Painel de Organização — Escoramentos</h1>
+        <div class="sub">Ferramenta local · dados ficam só no seu navegador até você exportar</div>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <button class="btn secondary" onclick="clearAll()">Limpar tudo</button>
+        <button class="btn" onclick="exportAll()">⬇️ Baixar ZIP final</button>
+    </div>
+</div>
+
+<div class="layout">
+    <div class="list-col" id="listCol"></div>
+    <div class="main-col" id="mainCol">
+        <div class="empty-state">👈 Selecione um escoramento na lista para começar</div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const ESCORAMENTOS = ["01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26a","26b","27","28","29"];
+const ENDERECOS = {
+  "01":"R. Visc. de Ouro Preto, 69","02":"R. Ruy Barbosa, 47","03":"Ladeira da Praça, 26 - Centro","04":"","05":"",
+  "06":"Rua do Tijolo","07":"","08":"","09":"","10":"","11":"","12":"Ladeira da Montanha, 13","13":"R. do Tabuão, 48",
+  "14":"R. do Passo, 70 - Sto. Antônio Além do Carmo","15":"R. Visc. de Mauá, 116","16":"Ladeira da Conceição da Praia, 5 - Centro",
+  "17":"R. do Corpo Santo, 7 - Comércio","18":"R. do Corpo Santo, 29","19":"Rua do Julião, 7","20":"Rua do Julião","21":"",
+  "22":"R. dos Adôbes, 29","23":"Largo Quitandinha do Capim, 10 - Santo Antônio","24":"","25":"Ladeira da Soledade, 8",
+  "26a":"Ladeira da Soledade, 150","26b":"R. do Álvo, 28","27":"R. do Álvo, 31","28":"","29":"Rua do Gravatá, 7"
+};
+
+const D1_LABELS = { desaprumo: 'Desaprumo da Fachada', flambagem: 'Flambagem/Desalinhamento do Escoramento', travamentos: 'Travamentos Laterais (Rigidez)', degradacaoMadeira: 'Degradação em Madeira (Apodrecimento)', corrosaoAco: 'Corrosão em Aço (Uniforme/Pitting)', calcos: 'Distribuição de Carga nos Calços' };
+const D2_LABELS = { estadoAlvenaria: 'Estado da Alvenaria Subjacente', reversibilidade: 'Reversibilidade das Fixações/Calços' };
+const D3_LABELS = { espacoCalcada: 'Espaço Livre em Calçada/Via Pública', alturaLivre: 'Altura Livre para Pedestres', riscoColisao: 'Risco de Colisão/Impacto em Via', sinalizacao: 'Sinalização e Segurança', impactoVisual: 'Impacto Visual no Contexto Histórico' };
+
+let STATE = {}; // { "01": { photos: [{name, dataUrl}], ficha: {...} }, ... }
+let current = null;
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem('escoramentos_admin_state');
+        if (raw) STATE = JSON.parse(raw);
+    } catch (e) { console.warn('Não foi possível carregar estado salvo', e); }
+    ESCORAMENTOS.forEach(id => { if (!STATE[id]) STATE[id] = { photos: [], ficha: null }; });
+}
+
+function saveState() {
+    try {
+        localStorage.setItem('escoramentos_admin_state', JSON.stringify(STATE));
+    } catch (e) {
+        console.warn('Não foi possível salvar no localStorage (provavelmente as fotos são grandes demais). Exporte o ZIP com frequência.', e);
+    }
+}
+
+function renderList() {
+    const col = document.getElementById('listCol');
+    col.innerHTML = ESCORAMENTOS.map(id => {
+        const s = STATE[id];
+        const hasPhotos = s.photos.length > 0;
+        const hasFicha = !!s.ficha;
+        return `<div class="item ${current === id ? 'active' : ''}" onclick="selectItem('${id}')">
+            <div><span class="num">${id}</span>Esc. ${id}</div>
+            <div class="flags">
+                ${hasPhotos ? `<span class="flag on-photo">${s.photos.length}📸</span>` : ''}
+                ${hasFicha ? `<span class="flag on-ficha">📋</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function selectItem(id) {
+    current = id;
+    renderList();
+    renderMain();
+}
+
+function renderMain() {
+    const col = document.getElementById('mainCol');
+    if (!current) { col.innerHTML = '<div class="empty-state">👈 Selecione um escoramento na lista para começar</div>'; return; }
+
+    const s = STATE[current];
+    const f = s.ficha || {};
+
+    col.innerHTML = `
+        <div class="panel-title">Escoramento ${current}</div>
+        <div class="panel-address">📍 ${ENDERECOS[current] || 'Endereço não informado'}</div>
+
+        <div class="tabs">
+            <button class="tabbtn active" data-tab="fotos" onclick="switchAdminTab('fotos')">📸 Fotos (${s.photos.length})</button>
+            <button class="tabbtn" data-tab="ficha" onclick="switchAdminTab('ficha')">📋 Ficha de Avaliação</button>
+        </div>
+
+        <div class="tabpane active" id="pane-fotos">
+            <div class="instructions">Selecione as fotos deste escoramento (das pastas <code>Imagens escoramentos - Salvador</code> ou <code>Imagens pelourinho - Laís</code>). Pode selecionar várias de uma vez.</div>
+            <div class="dropzone" onclick="document.getElementById('fileInput').click()">
+                📁 Clique para selecionar fotos deste escoramento
+                <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(event)">
+            </div>
+            <div class="photo-grid" id="photoGrid"></div>
+        </div>
+
+        <div class="tabpane" id="pane-ficha">
+            <form id="fichaForm" onsubmit="return false;"></form>
+        </div>
+    `;
+
+    renderPhotoGrid();
+    renderFichaForm();
+}
+
+function switchAdminTab(tab) {
+    document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tabpane').forEach(p => p.classList.remove('active'));
+    document.getElementById('pane-' + tab).classList.add('active');
+}
+
+function renderPhotoGrid() {
+    const grid = document.getElementById('photoGrid');
+    const s = STATE[current];
+    grid.innerHTML = s.photos.map((p, i) => `
+        <div class="photo-thumb">
+            <img src="${p.dataUrl}" alt="${p.name}">
+            <button class="rm" onclick="removePhoto(${i})">✕</button>
+            <div class="fname">${p.name}</div>
+        </div>
+    `).join('');
+}
+
+function handleFiles(event) {
+    const files = Array.from(event.target.files);
+    let pending = files.length;
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            STATE[current].photos.push({ name: file.name, dataUrl: e.target.result });
+            pending--;
+            if (pending === 0) { saveState(); renderPhotoGrid(); renderList(); }
+        };
+        reader.readAsDataURL(file);
+    });
+    event.target.value = '';
+}
+
+function removePhoto(index) {
+    STATE[current].photos.splice(index, 1);
+    saveState();
+    renderPhotoGrid();
+    renderList();
+}
+
+function scaleInput(name, value) {
+    return `<div class="scale">
+        ${[0,1,2].map(v => `<label><input type="radio" name="${name}" value="${v}" ${value === v ? 'checked' : ''}> ${v}</label>`).join('')}
+    </div>`;
+}
+
+function renderFichaForm() {
+    const form = document.getElementById('fichaForm');
+    const f = STATE[current].ficha || {};
+    const d1 = f.d1 || {}; const d2 = f.d2 || {}; const d3 = f.d3 || {};
+
+    form.innerHTML = `
+        <fieldset>
+            <legend>Identificação</legend>
+            <div class="row2">
+                <div class="field"><label>Endereço completo</label><input type="text" name="endereco" value="${esc(f.endereco || ENDERECOS[current] || '')}"></div>
+                <div class="field"><label>Bairro</label><input type="text" name="bairro" value="${esc(f.bairro || '')}"></div>
+            </div>
+            <div class="row2">
+                <div class="field"><label>Data da avaliação</label><input type="text" name="dataAvaliacao" placeholder="dd/mm/2026" value="${esc(f.dataAvaliacao || '')}"></div>
+                <div class="field"><label>Estado geral</label>
+                    <select name="estadoGeral">
+                        <option value="">—</option>
+                        <option value="Recém-instalado (< 1 ano)" ${f.estadoGeral==='Recém-instalado (< 1 ano)'?'selected':''}>Recém-instalado (&lt; 1 ano)</option>
+                        <option value="Intermediário (1-5 anos)" ${f.estadoGeral==='Intermediário (1-5 anos)'?'selected':''}>Intermediário (1-5 anos)</option>
+                        <option value="Antigo (> 5 anos)" ${f.estadoGeral==='Antigo (> 5 anos)'?'selected':''}>Antigo (&gt; 5 anos)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row2">
+                <div class="field"><label>Tipologia do escoramento</label>
+                    <select name="tipologia">
+                        <option value="">—</option>
+                        <option ${f.tipologia==='Flying Shore'?'selected':''}>Flying Shore</option>
+                        <option ${f.tipologia==='Vertical Shore'?'selected':''}>Vertical Shore</option>
+                        <option ${f.tipologia==='Raking Shore'?'selected':''}>Raking Shore</option>
+                        <option ${f.tipologia==='Dead Shore'?'selected':''}>Dead Shore</option>
+                        <option ${f.tipologia==='Variação/Combinação'?'selected':''}>Variação/Combinação</option>
+                    </select>
+                </div>
+                <div class="field"><label>Material principal</label>
+                    <select name="material">
+                        <option value="">—</option>
+                        <option ${f.material==='Madeira'?'selected':''}>Madeira</option>
+                        <option ${f.material==='Aço'?'selected':''}>Aço</option>
+                        <option ${f.material==='Sistema Misto'?'selected':''}>Sistema Misto</option>
+                        <option ${f.material==='Outro'?'selected':''}>Outro</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>D1 — Dimensão Estrutural (0=Não atende · 1=Parcial · 2=Atende)</legend>
+            ${Object.keys(D1_LABELS).map(k => `<div class="criterio"><div class="crit-label">${D1_LABELS[k]}</div>${scaleInput('d1_'+k, d1[k])}</div>`).join('')}
+        </fieldset>
+
+        <fieldset>
+            <legend>D2 — Dimensão Patrimonial</legend>
+            ${Object.keys(D2_LABELS).map(k => `<div class="criterio"><div class="crit-label">${D2_LABELS[k]}</div>${scaleInput('d2_'+k, d2[k])}</div>`).join('')}
+        </fieldset>
+
+        <fieldset>
+            <legend>D3 — Dimensão Urbana</legend>
+            ${Object.keys(D3_LABELS).map(k => `<div class="criterio"><div class="crit-label">${D3_LABELS[k]}</div>${scaleInput('d3_'+k, d3[k])}</div>`).join('')}
+        </fieldset>
+
+        <fieldset>
+            <legend>Eixos de comparação</legend>
+            <div class="field"><label>Danos à alvenaria (relação com tipologia)</label><textarea name="eixo1TipologiaDanos">${esc(f.eixo1TipologiaDanos || '')}</textarea></div>
+            <div class="row2">
+                <div class="field"><label>Distância aproximada do oceano (m)</label><input type="text" name="eixo2DistanciaOceano" value="${esc(f.eixo2DistanciaOceano || '')}"></div>
+                <div class="field"><label>Corrosão observada</label>
+                    <select name="eixo2Corrosao">
+                        <option value="">—</option>
+                        <option ${f.eixo2Corrosao==='Nenhum'?'selected':''}>Nenhum</option>
+                        <option ${f.eixo2Corrosao==='Leve'?'selected':''}>Leve</option>
+                        <option ${f.eixo2Corrosao==='Moderado'?'selected':''}>Moderado</option>
+                        <option ${f.eixo2Corrosao==='Severo'?'selected':''}>Severo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field"><label>Observações — maresia/corrosão</label><textarea name="eixo2Obs">${esc(f.eixo2Obs || '')}</textarea></div>
+            <div class="field"><label>Agentes biológicos urbanos (urina, resíduos, etc.)</label>
+                <select name="eixo3Biologico">
+                    <option value="">—</option>
+                    <option ${f.eixo3Biologico==='Não visível'?'selected':''}>Não visível</option>
+                    <option ${f.eixo3Biologico==='Leve'?'selected':''}>Leve</option>
+                    <option ${f.eixo3Biologico==='Moderado'?'selected':''}>Moderado</option>
+                    <option ${f.eixo3Biologico==='Severo'?'selected':''}>Severo</option>
+                </select>
+            </div>
+            <div class="field"><label>Observações — degradação biológica</label><textarea name="eixo3Obs">${esc(f.eixo3Obs || '')}</textarea></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Observações gerais</legend>
+            <div class="field"><label>Descrição geral do caso</label><textarea name="descricaoGeral">${esc(f.descricaoGeral || '')}</textarea></div>
+            <div class="field"><label>Intervenções realizadas</label><textarea name="intervencoesRealizadas">${esc(f.intervencoesRealizadas || '')}</textarea></div>
+            <div class="field"><label>Acessibilidade em campo</label><textarea name="acessibilidadeCampo">${esc(f.acessibilidadeCampo || '')}</textarea></div>
+            <div class="field"><label>Recomendações imediatas</label><textarea name="recomendacoesImediatas">${esc(f.recomendacoesImediatas || '')}</textarea></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Pesquisador</legend>
+            <div class="row2">
+                <div class="field"><label>Nome</label><input type="text" name="pesquisador" value="${esc(f.pesquisador || '')}"></div>
+                <div class="field"><label>Data</label><input type="text" name="dataFicha" placeholder="dd/mm/2026" value="${esc(f.dataFicha || '')}"></div>
+            </div>
+        </fieldset>
+
+        <div class="save-bar">
+            <button type="button" class="btn" onclick="saveFicha()">💾 Salvar ficha deste escoramento</button>
+            <span class="save-msg" id="saveMsg"></span>
+        </div>
+    `;
+}
+
+function esc(s) { return String(s).replace(/"/g, '&quot;'); }
+
+function saveFicha() {
+    const form = document.getElementById('fichaForm');
+    const fd = new FormData(form);
+    const get = (k) => fd.get(k) || '';
+    const getScore = (k) => { const v = fd.get(k); return v === null || v === '' ? null : parseInt(v, 10); };
+
+    const ficha = {
+        endereco: get('endereco'), bairro: get('bairro'), dataAvaliacao: get('dataAvaliacao'),
+        tipologia: get('tipologia'), material: get('material'), estadoGeral: get('estadoGeral'),
+        d1: {}, d2: {}, d3: {},
+        eixo1TipologiaDanos: get('eixo1TipologiaDanos'),
+        eixo2DistanciaOceano: get('eixo2DistanciaOceano'), eixo2Corrosao: get('eixo2Corrosao'), eixo2Obs: get('eixo2Obs'),
+        eixo3Biologico: get('eixo3Biologico'), eixo3Obs: get('eixo3Obs'),
+        descricaoGeral: get('descricaoGeral'), intervencoesRealizadas: get('intervencoesRealizadas'),
+        acessibilidadeCampo: get('acessibilidadeCampo'), recomendacoesImediatas: get('recomendacoesImediatas'),
+        pesquisador: get('pesquisador'), dataFicha: get('dataFicha')
+    };
+    Object.keys(D1_LABELS).forEach(k => ficha.d1[k] = getScore('d1_' + k));
+    Object.keys(D2_LABELS).forEach(k => ficha.d2[k] = getScore('d2_' + k));
+    Object.keys(D3_LABELS).forEach(k => ficha.d3[k] = getScore('d3_' + k));
+
+    STATE[current].ficha = ficha;
+    saveState();
+    renderList();
+    document.getElementById('saveMsg').textContent = '✓ Ficha salva localmente';
+    setTimeout(() => { const m = document.getElementById('saveMsg'); if (m) m.textContent = ''; }, 2500);
+}
+
+function clearAll() {
+    if (!confirm('Isso apaga TODAS as fotos e fichas salvas localmente neste navegador. Tem certeza?')) return;
+    localStorage.removeItem('escoramentos_admin_state');
+    STATE = {};
+    ESCORAMENTOS.forEach(id => STATE[id] = { photos: [], ficha: null });
+    current = null;
+    renderList();
+    renderMain();
+}
+
+async function exportAll() {
+    const zip = new JSZip();
+    const fotosFolder = zip.folder('fotos');
+    const mapping = {};
+    const fichas = { escoramentos: {} };
+
+    ESCORAMENTOS.forEach(id => {
+        const s = STATE[id];
+        if (s.photos.length > 0) {
+            mapping[id] = [];
+            s.photos.forEach((p, idx) => {
+                const ext = (p.name.split('.').pop() || 'jpg').toLowerCase();
+                const safeName = `escoramento_${id}_${String(idx + 1).padStart(2, '0')}.${ext}`;
+                const base64 = p.dataUrl.split(',')[1];
+                fotosFolder.file(safeName, base64, { base64: true });
+                mapping[id].push(safeName);
+            });
+        }
+        fichas.escoramentos[id] = s.ficha || null;
+    });
+
+    zip.file('fotos-mapeamento.json', JSON.stringify({ mapping }, null, 2));
+    zip.file('fichas-escoramentos.json', JSON.stringify(fichas, null, 2));
+    zip.file('LEIA-ME.txt',
+`COMO USAR ESTE PACOTE
+======================
+1. Extraia este ZIP.
+2. Copie a pasta "fotos" INTEIRA para dentro da pasta do seu site (github-pages/fotos), substituindo se já existir.
+3. Copie os arquivos "fotos-mapeamento.json" e "fichas-escoramentos.json" para a raiz do site (github-pages/), substituindo os antigos.
+4. Faça o commit/push para o GitHub normalmente.
+5. Pronto — o mapa (index.html) já lê esses dois arquivos automaticamente.
+`);
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'escoramentos-pacote-final.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+loadState();
+renderList();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+COMO USAR ESTE PACOTE
+======================
+1. Extraia este ZIP.
+2. Copie a pasta "fotos" INTEIRA para dentro da pasta do seu site (github-pages/fotos), substituindo se já existir.
+3. Copie os arquivos "fotos-mapeamento.json" e "fichas-escoramentos.json" para a raiz do site (github-pages/), substituindo os antigos.
+4. Faça o commit/push para o GitHub normalmente.
+5. Pronto — o mapa (index.html) já lê esses dois arquivos automaticamente.
